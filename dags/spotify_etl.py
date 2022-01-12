@@ -1,5 +1,5 @@
 import sqlalchemy
-import pandas as pd 
+import pandas as pd
 from sqlalchemy.orm import sessionmaker
 import requests
 import json
@@ -15,7 +15,7 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
     # Check if dataframe is empty
     if df.empty:
         print("No songs downloaded. Finishing execution")
-        return False 
+        return False
 
     # Primary Key Check
     if pd.Series(df['played_at']).is_unique:
@@ -33,6 +33,7 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
 
     timestamps = df["timestamp"].tolist()
     for timestamp in timestamps:
+
         if datetime.datetime.strptime(timestamp, '%Y-%m-%d') != yesterday:
             raise Exception("At least one of the returned songs does not have a yesterday's timestamp")
 
@@ -42,23 +43,19 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
 def run_spotify_etl():
     DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
     USER_ID = ''
-    TOKEN = ''
+    TOKEN = 'BQDLfIFWIuwgLhSlqNg0fsvZ7rrktFVelZQiDfQPu5g7vzNpKru8AXqPO4ahWGtmXZXZ-f7wgwcVr1uLap-2t6BKb331SlboAvQcRIJcxlln_-36twYsv4LwR5Na7nqr2TDdW2qGTfOiccgbMt9UUY3UWSWzTEaWUb8C81jjLIVEjKmhuUvGgkXs'
 
       # Extract part of the ETL process
- 
+
     headers = {
         "Accept" : "application/json",
         "Content-Type" : "application/json",
         "Authorization" : "Bearer {token}".format(token=TOKEN)
     }
-    
-    # Convert time to Unix timestamp in miliseconds      
-    today = datetime.datetime.now()
-    yesterday = today - datetime.timedelta(days=1)
-    yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
 
-    # Download all songs you've listened to "after yesterday", which means in the last 24 hours      
-    r = requests.get("https://api.spotify.com/v1/me/player/recently-played?after={time}".format(time=yesterday_unix_timestamp), headers = headers)
+    # Download all songs you've listened to "after yesterday", which means in the last 24 hours
+    r = requests.get(
+        f"https://api.spotify.com/v1/me/player/recently-played?", headers=headers)
 
     data = r.json()
 
@@ -67,14 +64,14 @@ def run_spotify_etl():
     played_at_list = []
     timestamps = []
 
-    # Extracting only the relevant bits of data from the json object      
+    # Extracting only the relevant bits of data from the json object
     for song in data["items"]:
         song_names.append(song["track"]["name"])
         artist_names.append(song["track"]["album"]["artists"][0]["name"])
         played_at_list.append(song["played_at"])
         timestamps.append(song["played_at"][0:10])
-        
-    # Prepare a dictionary in order to turn it into a pandas dataframe below       
+
+    # Prepare a dictionary in order to turn it into a pandas dataframe below
     song_dict = {
         "song_name" : song_names,
         "artist_name": artist_names,
@@ -83,10 +80,10 @@ def run_spotify_etl():
     }
 
     song_df = pd.DataFrame(song_dict, columns = ["song_name", "artist_name", "played_at", "timestamp"])
-    
+
     # Validate
-    if check_if_valid_data(song_df):
-        print("Data valid, proceed to Load stage")
+    # if check_if_valid_data(song_df):
+    #     print("Data valid, proceed to Load stage")
 
     # Load
 
@@ -114,3 +111,6 @@ def run_spotify_etl():
 
     conn.close()
     print("Close database successfully")
+
+if __name__ == "__main__":
+    run_spotify_etl()
